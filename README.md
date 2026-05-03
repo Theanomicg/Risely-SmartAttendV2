@@ -44,7 +44,6 @@ smartattend-v2/
 |-- docs/
 |   |-- nginx.conf
 |   `-- smartattend.service
-|-- server/
 `-- start.sh
 ```
 
