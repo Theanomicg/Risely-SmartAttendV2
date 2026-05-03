@@ -1,0 +1,34 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+!.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+
+# Local app data
+*.db
+snapshots/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Malformed archive artifacts
+{backend/
+{server/
