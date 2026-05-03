@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import Admin, Camera
+from app.models import Admin, Camera, ClassSession
 from app.schemas import CameraCreate, CameraUpdate, CameraOut
 from app.deps import get_current_admin
 from app.services.camera_service import (
@@ -100,8 +100,14 @@ async def delete_camera(camera_id: int, db: AsyncSession = Depends(get_db),
     cam = result.scalar_one_or_none()
     if not cam:
         raise HTTPException(404, "Camera not found.")
+
     remove_camera(cam.rtsp_url)
-    cam.is_active = False
+
+    sessions_result = await db.execute(select(ClassSession).where(ClassSession.camera_id == cam.id))
+    for session in sessions_result.scalars().all():
+        session.camera_id = None
+
+    await db.delete(cam)
     await db.commit()
     return {"ok": True}
 

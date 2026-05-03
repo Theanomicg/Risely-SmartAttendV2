@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.database import get_db
-from app.models import Admin, Student, FaceSample
+from app.models import Admin, Student, FaceSample, Attendance, Alert, SessionWatchList
 from app.schemas import StudentCreate, StudentOut, StudentUpdate
 from app.deps import get_current_admin
 from app.config import settings
@@ -115,7 +115,30 @@ async def delete_student(student_id: str, db: AsyncSession = Depends(get_db),
     s = result.scalar_one_or_none()
     if not s:
         raise HTTPException(404, "Student not found.")
-    s.is_active = False
+
+    if s.photo_path and os.path.exists(s.photo_path):
+        try:
+            os.remove(s.photo_path)
+        except OSError:
+            pass
+
+    face_samples_result = await db.execute(select(FaceSample).where(FaceSample.student_id == s.id))
+    for sample in face_samples_result.scalars().all():
+        await db.delete(sample)
+
+    attendances_result = await db.execute(select(Attendance).where(Attendance.student_id == s.id))
+    for attendance in attendances_result.scalars().all():
+        await db.delete(attendance)
+
+    alerts_result = await db.execute(select(Alert).where(Alert.student_id == s.id))
+    for alert in alerts_result.scalars().all():
+        await db.delete(alert)
+
+    watch_list_result = await db.execute(select(SessionWatchList).where(SessionWatchList.student_id == s.id))
+    for watch_entry in watch_list_result.scalars().all():
+        await db.delete(watch_entry)
+
+    await db.delete(s)
     await db.commit()
     return {"ok": True}
 

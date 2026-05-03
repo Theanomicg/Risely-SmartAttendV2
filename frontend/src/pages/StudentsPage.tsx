@@ -154,9 +154,9 @@ export default function StudentsPage() {
   useEffect(() => { load() }, [search])
 
   const deleteStudent = async (s: Student) => {
-    if (!confirm(`Deactivate student "${s.name}"?`)) return
+    if (!confirm(`Delete student "${s.name}"? This will remove their enrollment and attendance records.`)) return
     await api.delete(`/students/${s.student_id}`)
-    toast.success('Student deactivated')
+    toast.success('Student deleted')
     load()
   }
 

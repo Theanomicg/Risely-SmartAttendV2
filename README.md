@@ -1,46 +1,113 @@
-# SmartAttend v2 — Risely Platform
-> AI-powered face recognition attendance system with real-time CCTV monitoring, live alerts, and Zoho email notifications.
+# SmartAttend v2
 
----
+SmartAttend v2 is an attendance and classroom monitoring platform built with FastAPI and React. It combines face-based student enrollment, kiosk check-in, live session monitoring, RTSP camera integration, WebSocket alerts, and Zoho SMTP notifications.
 
-## 🚀 Quick Start (Development)
+## Overview
 
-### Prerequisites
+SmartAttend provides:
 
-| Tool | Min Version | Install |
-|---|---|---|
-| Python | 3.10+ | `sudo apt install python3.10 python3.10-venv` |
-| Node.js | 18+ | https://nodejs.org |
-| Git | any | `sudo apt install git` |
+- Admin authentication and dashboard access
+- Student registration and face enrollment
+- Camera registration and live snapshot testing
+- Session creation and classroom monitoring
+- Kiosk-based face check-in
+- Real-time alert delivery in the dashboard
+- Email alerts and daily reports through Zoho SMTP
 
-### 1. Clone & configure
+## Tech Stack
 
-```bash
-git clone https://github.com/yourorg/smartattend-v2.git
-cd smartattend-v2
+- Backend: FastAPI, SQLAlchemy, APScheduler, aiosqlite
+- Frontend: React, Vite, TypeScript, Zustand
+- Computer vision: OpenCV, InsightFace, ONNX Runtime
+- Notifications: WebSocket and Zoho SMTP
+- Database: SQLite by default, PostgreSQL optional for production
 
-# Backend config
-cp backend/.env.example backend/.env
-nano backend/.env   # Fill in SMTP_USER, SMTP_PASSWORD, SECRET_KEY
+## Project Structure
 
-# Frontend config (optional for dev — proxy is pre-configured)
-cp frontend/.env.example frontend/.env
+```text
+smartattend-v2/
+|-- backend/
+|   |-- app/
+|   |   |-- main.py
+|   |   |-- models.py
+|   |   |-- schemas.py
+|   |   |-- config.py
+|   |   |-- deps.py
+|   |   |-- routers/
+|   |   `-- services/
+|   |-- requirements.txt
+|   `-- .env.example
+|-- frontend/
+|   |-- src/
+|   |-- package.json
+|   `-- .env.example
+|-- docs/
+|   |-- nginx.conf
+|   `-- smartattend.service
+|-- server/
+`-- start.sh
 ```
 
-### 2. Run
+## Prerequisites
+
+- Python 3.10 or newer
+- Node.js 18 or newer
+- Git
+
+## Local Development
+
+### Linux or macOS
+
+1. Clone the repository and enter the project directory.
+2. Copy the backend environment template.
+3. Run the startup script.
 
 ```bash
+git clone https://github.com/Theanomicg/Risely-SmartAttendV2.git
+cd Risely-SmartAttendV2
+cp backend/.env.example backend/.env
 chmod +x start.sh
 ./start.sh
 ```
 
-That's it. Open **http://localhost:5173**
+The development UI is available at `http://localhost:5173` and the backend API at `http://localhost:8000`.
 
----
+### Windows PowerShell
 
-## 🔑 First-Time Account Setup
+The bundled `start.sh` script is intended for Bash environments. On Windows, run the backend and frontend separately.
 
-After starting, create your first admin account:
+```powershell
+cd C:\path\to\Risely-SmartAttendV2
+Copy-Item backend\.env.example backend\.env
+
+cd backend
+py -3.12 -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+
+cd ..\frontend
+npm install
+```
+
+Start the backend in one terminal:
+
+```powershell
+cd C:\path\to\Risely-SmartAttendV2\backend
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Start the frontend in a second terminal:
+
+```powershell
+cd C:\path\to\Risely-SmartAttendV2\frontend
+npm run dev
+```
+
+## Initial Admin Setup
+
+After the backend is running, create the first admin account:
 
 ```bash
 curl -X POST http://localhost:8000/auth/setup \
@@ -48,240 +115,159 @@ curl -X POST http://localhost:8000/auth/setup \
   -d '{"name":"Admin","email":"admin@school.com","password":"yourpassword"}'
 ```
 
-Then log in at http://localhost:5173/login
+On Windows PowerShell, the equivalent command is:
 
----
-
-## 📋 Step-by-Step Usage
-
-### Step 1 — Add Cameras
-1. Go to **Cameras** → **Add Camera**
-2. Enter camera name, room/location, and RTSP URL
-3. Click **Test** — you'll see a live snapshot preview
-4. Save — streaming starts immediately
-
-**RTSP URL formats:**
+```powershell
+Invoke-RestMethod `
+  -Method POST `
+  -Uri "http://localhost:8000/auth/setup" `
+  -ContentType "application/json" `
+  -Body '{"name":"Admin","email":"admin@school.com","password":"yourpassword"}'
 ```
+
+Then sign in at `http://localhost:5173/login`.
+
+## Usage Flow
+
+### 1. Add Cameras
+
+Add RTSP-enabled classroom cameras from the Cameras page. Each camera can be tested before saving.
+
+Example RTSP formats:
+
+```text
 rtsp://admin:password@192.168.1.100:554/stream
 rtsp://192.168.1.101:554/ch0
 rtsp://user:pass@camera-ip/live/main
 ```
 
-### Step 2 — Register Students
-1. Go to **Students** → **Add Student**
-2. Fill in Student ID, Name, Batch
-3. Click **Enroll** → use webcam to capture 5 face photos
-   - Or upload existing photos via the upload button
+### 2. Register Students
 
-### Step 3 — Start a Session
-1. Go to **Live Sessions** → **Start Session**
-2. Enter Subject, Batch, Room, and assign a Camera
-3. Session starts — camera begins monitoring
+Create student records from the Students page and capture or upload face samples for enrollment.
 
-### Step 4 — Student Kiosk Check-In
-Students check in using the kiosk endpoint:
+### 3. Start Sessions
 
-```bash
+Create a classroom session by subject, batch, room, and optional camera assignment.
+
+### 4. Student Check-In
+
+Students do not use a username/password flow. Check-in is performed through the kiosk endpoint with a kiosk API key and a captured image.
+
+```text
 POST /attendance/kiosk/check-in
-Headers: x-kiosk-key: YOUR_KIOSK_API_KEY
+Header: x-kiosk-key: YOUR_KIOSK_API_KEY
 Body: { "session_id": 1, "image_b64": "..." }
 ```
 
-The kiosk can be:
-- A Raspberry Pi with a webcam
-- A tablet running the kiosk web app
-- Any device that can POST a base64 JPEG
+### 5. Monitoring and Alerts
 
-### Step 5 — Monitoring Kicks In
-Every **5 minutes**, the camera:
-1. Captures a frame
-2. Runs InsightFace recognition
-3. Updates **last_seen** for found students
-4. Triggers alerts for missing students
+The scheduler periodically captures frames, runs recognition, updates last-seen data, and triggers alerts according to the configured thresholds.
 
-**Alert flow:**
-- **15 min absent** → 🔔 Bell rings on admin panel
-- **20 min absent** → 📧 Email sent to all configured recipients
+## Configuration
 
-### Step 6 — Configure Alert Emails
-1. Go to **Alerts** → **Email Recipients**
-2. Add up to 3 email addresses
-3. Click **Send Test Email** to verify Zoho is working
+Key backend environment values:
 
----
+| Variable | Description |
+|---|---|
+| `SECRET_KEY` | JWT signing key |
+| `KIOSK_API_KEY` | Device key for kiosk check-in |
+| `DATABASE_URL` | Database connection string |
+| `FACE_MODEL` | InsightFace model name |
+| `FACE_THRESHOLD` | Face matching threshold |
+| `FACE_ENROLLMENT_SAMPLES` | Required face samples per student |
+| `MONITORING_INTERVAL_SECONDS` | Camera scan interval |
+| `ABSENT_WARN_MINUTES` | Warning threshold |
+| `ABSENT_EMAIL_MINUTES` | Email alert threshold |
+| `SMTP_HOST` | SMTP server host |
+| `SMTP_PORT` | SMTP server port |
+| `SMTP_USER` | SMTP mailbox address |
+| `SMTP_PASSWORD` | SMTP app password |
+| `ALERT_EMAIL_RECIPIENTS` | Default alert email recipients |
 
-## 📧 Zoho SMTP Setup
+## Zoho SMTP Setup
 
-1. Log in to mail.zoho.in
-2. Go to **Settings → Security → App Passwords**
-3. Generate a new password (name it "SmartAttend")
-4. Add to `backend/.env`:
+For Zoho SMTP:
+
+1. Enable two-factor authentication on the Zoho account.
+2. Generate an app password from the Zoho account security settings.
+3. Set the backend environment values accordingly.
+
+Example:
 
 ```env
 SMTP_HOST=smtp.zoho.in
 SMTP_PORT=587
 SMTP_USER=alerts@yourdomain.com
-SMTP_PASSWORD=<generated-app-password>
+SMTP_PASSWORD=your_generated_app_password
+SMTP_FROM_NAME=SmartAttend Alerts
 ALERT_EMAIL_RECIPIENTS=principal@school.com,coordinator@school.com
 ```
 
----
+Use the Zoho app password, not the mailbox login password.
 
-## 🌐 Production Deployment (Internet-Accessible)
+## Production Deployment
 
-### Server requirements
-- Ubuntu 22.04 LTS (recommended)
-- 2 CPU cores, 4GB RAM minimum
-- Static IP or domain pointing to your server
+Recommended target:
 
-### Deploy steps
+- Ubuntu 22.04 LTS
+- 2 CPU cores minimum
+- 4 GB RAM minimum
+- Domain or static public IP
+
+Typical deployment flow:
 
 ```bash
-# 1. Clone to server
 sudo mkdir -p /var/www/smartattend
 sudo chown $USER:$USER /var/www/smartattend
-git clone https://github.com/yourorg/smartattend-v2.git /var/www/smartattend
+git clone https://github.com/Theanomicg/Risely-SmartAttendV2.git /var/www/smartattend
 cd /var/www/smartattend
 
-# 2. Configure
 cp backend/.env.example backend/.env
-nano backend/.env   # Set all values including ALLOWED_ORIGINS=https://yourdomain.com
 
-# 3. Build frontend
 cd frontend
-npm install && npm run build
+npm install
+npm run build
 cd ..
 
-# 4. Install Nginx + SSL
 sudo apt install nginx certbot python3-certbot-nginx
 sudo cp docs/nginx.conf /etc/nginx/sites-available/smartattend
-# Edit the file: replace yourdomain.com with your domain
-sudo nano /etc/nginx/sites-available/smartattend
-sudo ln -s /etc/nginx/sites-available/smartattend /etc/nginx/sites-enabled/
-sudo nginx -t
-
-# 5. Get SSL certificate
-sudo certbot --nginx -d yourdomain.com
-
-# 6. Install as systemd service
 sudo cp docs/smartattend.service /etc/systemd/system/
-# Edit WorkingDirectory paths if needed
 sudo systemctl daemon-reload
 sudo systemctl enable smartattend
 sudo systemctl start smartattend
-
-# 7. Check status
-sudo systemctl status smartattend
-sudo journalctl -u smartattend -f
 ```
 
-### Update frontend .env for production:
-```env
-VITE_API_URL=https://yourdomain.com/api
-VITE_WS_URL=wss://yourdomain.com/ws
-VITE_KIOSK_API_KEY=your_kiosk_api_key
-```
+Adjust domain names, environment values, and service paths before enabling the deployment.
 
----
+## Troubleshooting
 
-## ⚙️ Configuration Reference
+### InsightFace download or load issues
 
-| Variable | Default | Description |
-|---|---|---|
-| `SECRET_KEY` | CHANGE ME | JWT signing key — run `openssl rand -hex 32` |
-| `KIOSK_API_KEY` | CHANGE ME | Key for kiosk devices |
-| `FACE_MODEL` | `buffalo_l` | InsightFace model: `buffalo_l` (accurate) or `buffalo_s` (fast) |
-| `FACE_THRESHOLD` | `0.45` | Cosine similarity threshold (0–1) |
-| `FACE_ENROLLMENT_SAMPLES` | `5` | Photos required per student |
-| `MONITORING_INTERVAL_SECONDS` | `300` | How often camera scans (300 = 5 min) |
-| `ABSENT_WARN_MINUTES` | `15` | Minutes absent before panel bell |
-| `ABSENT_EMAIL_MINUTES` | `20` | Minutes absent before email alert |
-| `DATABASE_URL` | SQLite | Change to PostgreSQL URL for production scale |
-
----
-
-## 🏗 Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    SmartAttend v2                        │
-├──────────────┬────────────────────────┬─────────────────┤
-│   React SPA  │    FastAPI Backend     │  InsightFace    │
-│  (Vite)      │                        │  Buffalo_L      │
-│              │  ┌─────────────────┐   │  ArcFace 512-d  │
-│  Dashboard   │  │  APScheduler    │   │                 │
-│  Sessions    │  │  Every 5 min:   │◄──┤  RTSP Streams   │
-│  Students    │  │  • Grab frame   │   │  (OpenCV)       │
-│  Cameras     │  │  • Face recog   │   │                 │
-│  Alerts      │  │  • Update DB    │   │                 │
-│  Attendance  │  │  • Fire alerts  │   │                 │
-│              │  └─────────────────┘   │                 │
-│              │                        │                 │
-│  WebSocket ◄─┤  SQLite / PostgreSQL   │  Zoho SMTP      │
-│  Live alerts │                        │  HTML emails    │
-└──────────────┴────────────────────────┴─────────────────┘
-```
-
----
-
-## 📁 Project Structure
-
-```
-smartattend-v2/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app + WebSocket
-│   │   ├── models.py            # SQLAlchemy ORM models
-│   │   ├── schemas.py           # Pydantic schemas
-│   │   ├── config.py            # Settings from .env
-│   │   ├── deps.py              # Auth dependencies
-│   │   ├── routers/
-│   │   │   ├── auth.py          # Login, register
-│   │   │   ├── students.py      # Student CRUD + face enrollment
-│   │   │   ├── cameras.py       # Camera management
-│   │   │   ├── attendance.py    # Sessions, kiosk, records
-│   │   │   └── alerts.py        # Alerts + email recipients
-│   │   └── services/
-│   │       ├── face_service.py      # InsightFace recognition
-│   │       ├── camera_service.py    # RTSP stream management
-│   │       ├── email_service.py     # Zoho SMTP + HTML templates
-│   │       └── scheduler_service.py # 5-min monitoring loop
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/
-│   └── src/
-│       ├── pages/               # Dashboard, Students, Cameras, etc.
-│       ├── components/          # Sidebar, AlertPanel
-│       ├── store/               # Zustand stores (auth, ws/alerts)
-│       ├── hooks/               # useWebSocket
-│       └── lib/                 # Axios API client
-├── docs/
-│   ├── nginx.conf               # Production Nginx config
-│   └── smartattend.service      # Systemd service
-├── start.sh                     # One-command startup
-└── README.md
-```
-
----
-
-## 🐛 Troubleshooting
-
-**InsightFace fails to load:**
 ```bash
 pip install insightface onnxruntime --upgrade
-# First run downloads Buffalo_L model (~200MB) — needs internet
 ```
 
-**Camera not connecting:**
-- Test with VLC: Media → Open Network Stream → paste RTSP URL
-- Check camera credentials and IP
-- Try `rtsp://ip/stream1` or `rtsp://ip:554/h264Preview_01_main`
+The first run may download the model files and requires internet access.
 
-**Emails not sending:**
-- Use Zoho **App Password**, not your login password
-- Check `SMTP_USER` matches your Zoho account email exactly
-- Try `smtp.zoho.com` instead of `smtp.zoho.in` depending on your region
+### Camera connection failures
 
-**WebSocket disconnects:**
-- Normal — it auto-reconnects every 5 seconds
-- In production, ensure Nginx has `proxy_read_timeout 3600`
+- Verify the RTSP URL in VLC or another RTSP client
+- Confirm the camera IP address and credentials
+- Try alternate vendor-specific RTSP paths
+
+### Email delivery failures
+
+- Use a Zoho app password
+- Confirm `SMTP_USER` exactly matches the Zoho mailbox
+- Try `smtp.zoho.com` instead of `smtp.zoho.in` if your account region requires it
+
+### Frontend issues on Windows
+
+- Restart the Vite dev server after dependency or source changes
+- Ensure both backend and frontend are running
+- Open `http://localhost:5173/login` directly if the root route has stale browser state
+
+## Notes
+
+- Local `.env` files, SQLite databases, snapshots, virtual environments, and build artifacts are excluded from version control.
+- Student and camera deletion now perform hard deletes in the backend rather than only marking records inactive.
